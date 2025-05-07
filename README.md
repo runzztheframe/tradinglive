@@ -1,2 +1,2 @@
-# tradinglive
-trading live stock XAUUSD
+# --------------------TRADING LIVE 24H------------------------ 
+
