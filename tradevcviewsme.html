@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAU/USD Live Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        .price-up {
+            color: #10b981;
+            animation: pulse-up 0.5s;
+        }
+        .price-down {
+            color: #ef4444;
+            animation: pulse-down 0.5s;
+        }
+        @keyframes pulse-up {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes pulse-down {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        .blink {
+            animation: blink-animation 1s steps(2, start) infinite;
+        }
+        @keyframes blink-animation {
+            to { visibility: hidden; }
+        }
+        .tradingview-widget-container {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-chart-line text-yellow-500 text-3xl mr-3"></i>
+                <h1 class="text-2xl font-bold">XAU/USD Trading Dashboard</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                    <span class="text-gray-400">Server Time:</span>
+                    <span id="server-time" class="ml-2 font-mono">00:00:00</span>
+                </div>
+                <button id="fullscreen-btn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition">
+                    <i class="fas fa-expand"></i> Fullscreen
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Price Chart -->
+            <div class="lg:col-span-2 bg-gray-800 rounded-xl p-4 shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">XAU/USD Live Chart</h2>
+                    <div class="flex space-x-2">
+                        <select id="timeframe" class="bg-gray-700 text-white px-3 py-1 rounded">
+                            <option value="1">1m</option>
+                            <option value="5">5m</option>
+                            <option value="15">15m</option>
+                            <option value="60" selected>1H</option>
+                            <option value="240">4H</option>
+                            <option value="1440">1D</option>
+                        </select>
+                        <button id="refresh-chart" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-96">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Price Info -->
+            <div class="bg-gray-800 rounded-xl p-4 shadow-lg">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">Market Data</h2>
+                    <div class="flex items-center">
+                        <span class="bg-yellow-500 rounded-full w-3 h-3 mr-2 blink"></span>
+                        <span class="text-sm text-gray-300">LIVE</span>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Current Price -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-400">XAU/USD</span>
+                            <span id="change-percent" class="px-2 py-1 rounded text-sm">+0.00%</span>
+                        </div>
+                        <div class="flex items-end">
+                            <span id="current-price" class="text-3xl font-bold">1,800.25</span>
+                            <span id="price-direction" class="ml-2 text-xl"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Price Stats -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-700 rounded-lg p-3">
+                            <div class="text-gray-400 text-sm">High</div>
+                            <div id="daily-high" class="font-medium">1,805.50</div>
+                        </div>
+                        <div class="bg-gray-700 rounded-lg p-3">
+                            <div class="text-gray-400 text-sm">Low</div>
+                            <div id="daily-low" class="font-medium">1,795.30</div>
+                        </div>
+                        <div class="bg-gray-700 rounded-lg p-3">
+                            <div class="text-gray-400 text-sm">Open</div>
+                            <div id="daily-open" class="font-medium">1,798.75</div>
+                        </div>
+                        <div class="bg-gray-700 rounded-lg p-3">
+                            <div class="text-gray-400 text-sm">Prev Close</div>
+                            <div id="prev-close" class="font-medium">1,799.50</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Market Hours -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <h3 class="text-gray-400 mb-2">Trading Hours (GMT)</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span>London</span>
+                                <span>08:00 - 16:30</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>New York</span>
+                                <span>13:00 - 22:00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Tokyo</span>
+                                <span>00:00 - 09:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- News & Analysis -->
+        <div class="mt-8 bg-gray-800 rounded-xl p-4 shadow-lg">
+            <h2 class="text-xl font-semibold mb-4">Gold Market News</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="news-container">
+                <!-- News items will be loaded here -->
+                <div class="bg-gray-700 rounded-lg p-4 animate-pulse">
+                    <div class="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
+                    <div class="h-3 bg-gray-600 rounded w-full mb-3"></div>
+                    <div class="h-3 bg-gray-600 rounded w-5/6"></div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 animate-pulse">
+                    <div class="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
+                    <div class="h-3 bg-gray-600 rounded w-full mb-3"></div>
+                    <div class="h-3 bg-gray-600 rounded w-5/6"></div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 animate-pulse">
+                    <div class="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
+                    <div class="h-3 bg-gray-600 rounded w-full mb-3"></div>
+                    <div class="h-3 bg-gray-600 rounded w-5/6"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>Data is simulated for demonstration purposes. For real trading, connect to a broker API.</p>
+            <p class="mt-1">© 2023 XAU/USD Trading Dashboard. Not financial advice.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Chart
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        let priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'XAU/USD',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+
+        // Simulate real-time data
+        let currentPrice = 1800.25;
+        let previousPrice = currentPrice;
+        let dailyHigh = 1805.50;
+        let dailyLow = 1795.30;
+        let dailyOpen = 1798.75;
+        let prevClose = 1799.50;
+
+        // Update price display
+        function updatePriceDisplay() {
+            const priceElement = document.getElementById('current-price');
+            const changePercentElement = document.getElementById('change-percent');
+            const priceDirectionElement = document.getElementById('price-direction');
+            
+            const change = currentPrice - prevClose;
+            const changePercent = (change / prevClose) * 100;
+            
+            priceElement.textContent = currentPrice.toFixed(2);
+            changePercentElement.textContent = `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
+            
+            if (change > 0) {
+                priceElement.className = 'text-3xl font-bold price-up';
+                changePercentElement.className = 'px-2 py-1 rounded text-sm bg-green-900 text-green-300';
+                priceDirectionElement.innerHTML = '<i class="fas fa-caret-up"></i>';
+                priceDirectionElement.className = 'ml-2 text-xl text-green-500';
+            } else if (change < 0) {
+                priceElement.className = 'text-3xl font-bold price-down';
+                changePercentElement.className = 'px-2 py-1 rounded text-sm bg-red-900 text-red-300';
+                priceDirectionElement.innerHTML = '<i class="fas fa-caret-down"></i>';
+                priceDirectionElement.className = 'ml-2 text-xl text-red-500';
+            } else {
+                priceElement.className = 'text-3xl font-bold';
+                changePercentElement.className = 'px-2 py-1 rounded text-sm bg-gray-700 text-gray-300';
+                priceDirectionElement.innerHTML = '';
+            }
+            
+            // Update other stats
+            document.getElementById('daily-high').textContent = dailyHigh.toFixed(2);
+            document.getElementById('daily-low').textContent = dailyLow.toFixed(2);
+            document.getElementById('daily-open').textContent = dailyOpen.toFixed(2);
+            document.getElementById('prev-close').textContent = prevClose.toFixed(2);
+        }
+
+        // Generate random price movement
+        function generateRandomPrice() {
+            previousPrice = currentPrice;
+            const change = (Math.random() - 0.5) * 2; // Random between -1 and 1
+            currentPrice += change;
+            
+            // Ensure price stays within daily range
+            if (currentPrice > dailyHigh) dailyHigh = currentPrice;
+            if (currentPrice < dailyLow) dailyLow = currentPrice;
+            
+            updatePriceDisplay();
+            
+            // Add to chart
+            const now = new Date();
+            const timeLabel = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            if (priceChart.data.labels.length > 50) {
+                priceChart.data.labels.shift();
+                priceChart.data.datasets[0].data.shift();
+            }
+            
+            priceChart.data.labels.push(timeLabel);
+            priceChart.data.datasets[0].data.push(currentPrice);
+            priceChart.update();
+        }
+
+        // Update server time
+        function updateServerTime() {
+            const now = new Date();
+            document.getElementById('server-time').textContent = 
+                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+
+        // Load news (simulated)
+        function loadNews() {
+            const news = [
+                {
+                    title: "Fed Rate Decision Impacts Gold Prices",
+                    summary: "Gold prices fluctuate as markets digest latest Federal Reserve interest rate decision."
+                },
+                {
+                    title: "Dollar Strength Weighs on XAU/USD",
+                    summary: "The US dollar index reaches 3-month high, putting pressure on gold prices."
+                },
+                {
+                    title: "Geopolitical Tensions Support Gold",
+                    summary: "Safe-haven demand increases amid rising tensions in the Middle East."
+                }
+            ];
+            
+            const newsContainer = document.getElementById('news-container');
+            newsContainer.innerHTML = '';
+            
+            news.forEach(item => {
+                const newsItem = document.createElement('div');
+                newsItem.className = 'bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition cursor-pointer';
+                newsItem.innerHTML = `
+                    <h3 class="font-medium mb-2">${item.title}</h3>
+                    <p class="text-gray-400 text-sm">${item.summary}</p>
+                `;
+                newsContainer.appendChild(newsItem);
+            });
+        }
+
+        // Fullscreen functionality
+        document.getElementById('fullscreen-btn').addEventListener('click', () => {
+            const chartContainer = document.querySelector('.lg\\:col-span-2');
+            
+            if (!document.fullscreenElement) {
+                chartContainer.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Timeframe selector
+        document.getElementById('timeframe').addEventListener('change', function() {
+            // In a real app, this would fetch new data for the selected timeframe
+            alert(`Timeframe changed to ${this.value}m. In a real app, this would load new data.`);
+        });
+
+        // Refresh chart button
+        document.getElementById('refresh-chart').addEventListener('click', function() {
+            // In a real app, this would refresh the chart data
+            alert('Chart refresh requested. In a real app, this would reload the data.');
+        });
+
+        // Initialize
+        updatePriceDisplay();
+        updateServerTime();
+        loadNews();
+        
+        // Start simulated updates
+        setInterval(generateRandomPrice, 3000); // Update price every 3 seconds
+        setInterval(updateServerTime, 1000); // Update time every second
+        
+        // Initial chart data
+        for (let i = 0; i < 20; i++) {
+            generateRandomPrice();
+        }
+    </script>
+</body>
+</html>
